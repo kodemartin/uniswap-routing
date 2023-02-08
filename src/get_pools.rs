@@ -10,29 +10,27 @@
 #![allow(clippy::all, warnings, dead_code)]
 use std::result::Result;
 
+use bigdecimal::num_traits::ToPrimitive;
 use bigdecimal::BigDecimal;
 use num_bigint::BigInt;
 use serde::Deserializer;
 
 pub struct GetPools;
+pub type Pool = GetPoolsPools;
 
 pub const OPERATION_NAME: &str = "GetPools";
-pub const QUERY: &str = "query GetPool($fromToken: String! $toToken: String! $first: Int! $skip: Int!) {\n    pools(\n      first: 5\n      orderBy:liquidity\n      where: {\n        and: [\n          { liquidity_gt: 0 },\n        \n        {or: [\n          { token0_: { symbol:$fromToken } }\n          { token1_: { symbol:$fromToken } }\n          { token0_: { symbol:$toToken } }\n          { token1_: { symbol:$toToken } }\n        ]}\n        ]\n      }\n    ) {\n      token0 {\n        symbol\n      }\n      token1 {\n        symbol\n      }\n      feeTier\n      liquidity\n      token0Price\n      token1Price\n    }\n  }\n" ;
+pub const QUERY: &str = "query GetPool($first: Int! $skip: Int!) {\n    pools(\n      skip: $skip\n      first: $first\n      orderBy: txCount\n      orderDirection: desc\n where: {liquidity_gt: 0}\n ) {\n      token0 {\n        symbol\n      }\n      token1 {\n        symbol\n      }\n      feeTier\n      token0Price\n      token1Price\n    }\n  }\n" ;
 use serde::{Deserialize, Serialize};
 #[allow(dead_code)]
 type Boolean = bool;
 #[allow(dead_code)]
 type Float = f64;
 #[allow(dead_code)]
-type Int = i64;
+pub(crate) type Int = i64;
 #[allow(dead_code)]
 type ID = String;
 #[derive(Serialize, Debug)]
 pub struct Variables {
-    #[serde(rename = "fromToken")]
-    pub from_token: String,
-    #[serde(rename = "toToken")]
-    pub to_token: String,
     pub first: Int,
     pub skip: Int,
 }
@@ -45,10 +43,8 @@ pub struct ResponseData {
 pub struct GetPoolsPools {
     pub token0: GetPoolsPoolsToken0,
     pub token1: GetPoolsPoolsToken1,
-    #[serde(rename = "feeTier", deserialize_with = "deserialize_bigint")]
-    pub fee_tier: BigInt,
-    #[serde(deserialize_with = "deserialize_bigint")]
-    pub liquidity: BigInt,
+    #[serde(rename = "feeTier", deserialize_with = "deserialize_fee_tier")]
+    pub fee_tier: f64,
     #[serde(rename = "token0Price")]
     pub token0_price: BigDecimal,
     #[serde(rename = "token1Price")]
@@ -69,6 +65,16 @@ where
 {
     let number = String::deserialize(deserializer)?;
     Ok(BigInt::parse_bytes(number.as_bytes(), 10).unwrap_or_default())
+}
+
+fn deserialize_fee_tier<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let tier = deserialize_bigint(deserializer)?
+        .to_f64()
+        .expect("the fee tier should be representable in f64");
+    Ok(tier / 1_000_000_f64)
 }
 
 impl graphql_client::GraphQLQuery for GetPools {
