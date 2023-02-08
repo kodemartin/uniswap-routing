@@ -6,6 +6,8 @@
 //! the type's implementation of [`Deserialize`][`serde::Deserialize`] does not
 //! support this.
 //!
+//! Additional tweaks for readability and ergonomy are implemented.
+//!
 //! [graphql_client_cli]: https://github.com/graphql-rust/graphql-client#alternative-workflow-using-the-cli
 #![allow(clippy::all, warnings, dead_code)]
 use std::result::Result;
@@ -19,6 +21,8 @@ pub struct GetPools;
 pub type Pool = GetPoolsPools;
 
 pub const OPERATION_NAME: &str = "GetPools";
+/// Query to get a batch of pools that have liquidity greater than 0
+/// ordered by total transaction count in reverse order.
 pub const QUERY: &str = "query GetPool($first: Int! $skip: Int!) {\n    pools(\n      skip: $skip\n      first: $first\n      orderBy: txCount\n      orderDirection: desc\n where: {liquidity_gt: 0}\n ) {\n      token0 {\n        symbol\n      }\n      token1 {\n        symbol\n      }\n      feeTier\n      token0Price\n      token1Price\n    }\n  }\n" ;
 use serde::{Deserialize, Serialize};
 #[allow(dead_code)]
