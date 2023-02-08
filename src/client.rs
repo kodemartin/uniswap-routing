@@ -24,10 +24,9 @@ impl UniswapClient {
 
         let mut n_retries = Self::N_RETRIES;
         while n_retries > 0 {
+            println!("attempts left {n_retries} for {variables:?}");
             let res = self.0.post(UNISWAP_API).json(&request_body).send().await?;
             let response_body: Response<queries::ResponseData> = res.json().await?;
-            println!("attempts left: {n_retries}");
-            println!("response: {response_body:#?}");
             if response_body.data.is_none() {
                 n_retries -= 1;
             } else {
@@ -72,6 +71,7 @@ impl UniswapClient {
         Ok(pools)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

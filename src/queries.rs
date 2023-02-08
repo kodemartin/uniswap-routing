@@ -33,7 +33,7 @@ type Float = f64;
 pub(crate) type Int = i64;
 #[allow(dead_code)]
 type ID = String;
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone, Copy)]
 pub struct Variables {
     pub first: Int,
     pub skip: Int,
