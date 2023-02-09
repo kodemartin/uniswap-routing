@@ -10,6 +10,7 @@ use axum::{
     routing::get,
     Router, Server,
 };
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use uniswap_routing::client::UniswapClient;
 use uniswap_routing::graph::PoolGraph;
@@ -61,9 +62,22 @@ async fn graphiql() -> impl IntoResponse {
     response::Html(GraphiQLSource::build().endpoint("/").finish())
 }
 
+fn use_tracing_subscriber() {
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(tracing::Level::TRACE)
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    use_tracing_subscriber();
+    env_logger::init();
+
     let uniswap_client = UniswapClient::default();
+    tracing::debug!("Constructing pool graph");
     let pools = uniswap_client.get_all_pools(None, None).await?;
     let graph = Arc::new(RwLock::new(PoolGraph::from(pools)));
     let update_graph = Arc::clone(&graph);
@@ -72,6 +86,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::task::spawn(async move {
         tokio::time::sleep(tokio::time::Duration::from_secs(GRAPH_UPDATE_INTERVAL_SECS)).await;
         if let Ok(pools) = uniswap_client.get_all_pools(None, None).await {
+            tracing::debug!("Updating pool graph");
             *update_graph.write() = PoolGraph::from(pools);
         }
     });
@@ -84,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(graphiql).post(graphql_handler))
         .layer(Extension(schema));
 
-    println!("GraphiQL IDE: http://localhost:8000");
+    tracing::info!("Starting GraphiQL IDE at http://localhost:8000");
 
     Server::bind(&"127.0.0.1:8000".parse().unwrap())
         .serve(app.into_make_service())
