@@ -152,7 +152,7 @@ impl PoolGraph {
 
     /// Get the optimal swap route, if any, between two tokens along with the
     /// effective exchange rate.
-    pub fn optiomal_route(
+    pub fn optimal_route(
         &self,
         token0: impl AsRef<str>,
         token1: impl AsRef<str>,
@@ -185,7 +185,7 @@ mod tests {
     async fn graph_optimal_route() {
         let graph = construct_graph().await;
         println!("==> Calculating optimal route");
-        let route = graph.optiomal_route("WETH", "LINK");
+        let route = graph.optimal_route("WETH", "LINK");
         println!("Optimal route {:#?}", route);
     }
 
